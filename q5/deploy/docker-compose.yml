@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./deploy/Dockerfile
+    image: question_5:${QUESTION_5_VERSION:-latest}
+    restart: always
+    env_file:
+    - .env
+    environment:
+      QUESTION_5_HOST: 0.0.0.0
+      QUESTION_5_DB_FILE: /db_data/db.sqlite3
+    volumes:
+    - question_5-db-data:/db_data/
+
+  migrator:
+    image: question_5:${QUESTION_5_VERSION:-latest}
+    restart: "no"
+    command: alembic upgrade head
+    environment:
+      QUESTION_5_DB_FILE: /db_data/db.sqlite3
+    volumes:
+    - question_5-db-data:/db_data/
+
+
+
+volumes:
+  question_5-db-data:
+    name: question_5-db-data

@@ -1,0 +1,80 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: question-5
+  name: question-5-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: question-5-app
+  template:
+    metadata:
+      labels:
+        app: question-5-app
+    spec:
+      containers:
+      - name: app
+        image: question_5:latest
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: api-port
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - >-
+          alembic upgrade head &&
+          python -m question_5
+        env:
+        - name: QUESTION_5_HOST
+          value: "0.0.0.0"
+        - name: QUESTION_5_WORKERS_COUNT
+          value: "10"
+        resources:
+          limits:
+            memory: "200Mi"
+            cpu: "100m"
+        ports:
+        - containerPort: 8000
+          name: api-port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: question-5
+  name: question-5-app-service
+spec:
+  selector:
+    app: question-5-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: api-port
+    name: api-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: question-5-app
+  namespace: question-5
+  labels:
+    name: question-5-app
+spec:
+  rules:
+  - host: question-5.local
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: question-5-app-service
+            port:
+              name: api-port
+
+---
